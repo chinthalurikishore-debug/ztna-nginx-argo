@@ -98,7 +98,8 @@ metadata:
 spec:
   ingressClassName: traefik
   rules:
-    - http: nginx-ztna.systemqe.ccvapor.net
+  - host: nginx-ztna.systemqe.ccvapor.net
+    http:
         paths:
           - path: /
             pathType: Prefix
