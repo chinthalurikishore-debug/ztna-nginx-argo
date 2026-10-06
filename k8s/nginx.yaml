@@ -1,0 +1,109 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-html
+data:
+  index.html: |
+    <!doctype html>
+    <html lang="en">
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1">
+      <title>ZTNA Static HTML Test</title>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          max-width: 700px;
+          margin: 80px auto;
+          padding: 0 24px;
+          color: #172033;
+        }
+        .status {
+          padding: 16px;
+          border-radius: 8px;
+          background: #e8f7ee;
+          color: #146c43;
+          font-weight: bold;
+        }
+        code {
+          background: #f4f4f4;
+          padding: 2px 5px;
+          border-radius: 4px;
+        }
+      </style>
+    </head>
+    <body>
+      <h1>ZTNA Static HTML Test</h1>
+      <p class="status">SUCCESS: You reached the application.</p>
+      <p>This page is served by NGINX on Kubernetes and deployed by Argo CD.</p>
+      <p>Use this page to validate reverse-proxy and transparent-client-proxy access.</p>
+      <p>Application endpoint: <code>/</code></p>
+    </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-html
+  labels:
+    app: nginx-html
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-html
+  template:
+    metadata:
+      labels:
+        app: nginx-html
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html/index.html
+              subPath: index.html
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+      volumes:
+        - name: html
+          configMap:
+            name: nginx-html
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-html
+spec:
+  selector:
+    app: nginx-html
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nginx-html
+spec:
+  ingressClassName: traefik
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: nginx-html
+                port:
+                  number: 80
